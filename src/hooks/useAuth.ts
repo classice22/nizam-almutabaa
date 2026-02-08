@@ -31,8 +31,8 @@ export function useAuth() {
       }
       
       if (data && data.length > 0) {
-        const mappedUsers: User[] = data.map(u => ({
-          id: u.id.toString(),
+const mappedUsers: User[] = data.map((u: any) => ({
+        id: u.id.toString(),
           name: u.name,
           role: u.role as UserRole,
           username: u.username,
