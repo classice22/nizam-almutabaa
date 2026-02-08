@@ -15,40 +15,44 @@ export function useAuth() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(fallbackUsers);
   const [loading, setLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   // تحميل المستخدمين من Supabase
-  const loadUsers = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('id');
-      
-      if (error) {
-        console.error('خطأ في تحميل المستخدمين:', error);
-        setLoading(false);
-        return;
-      }
-      
-      if (data && data.length > 0) {
-const mappedUsers: User[] = data.map((u: any) => ({
-        id: u.id.toString(),
-          name: u.name,
-          role: u.role as UserRole,
-          username: u.username,
-        }));
-        setUsers(mappedUsers);
-      }
-    } catch (err) {
-      console.error('خطأ في الاتصال:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .order('id');
+        
+        if (error) {
+          console.error('خطأ في تحميل المستخدمين:', error);
+          setDataLoaded(true);
+          setLoading(false);
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          const mappedUsers: User[] = data.map((u: any) => ({
+            id: u.id.toString(),
+            name: u.name,
+            role: u.role as UserRole,
+            username: u.username,
+          }));
+          setUsers(mappedUsers);
+        }
+        setDataLoaded(true);
+      } catch (err) {
+        console.error('خطأ في الاتصال:', err);
+        setDataLoaded(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadUsers();
-  }, [loadUsers]);
+  }, []);
 
   const login = useCallback((username: string, password: string): boolean => {
     const user = users.find(u => u.username === username);
@@ -72,16 +76,11 @@ const mappedUsers: User[] = data.map((u: any) => ({
     return roles.includes(currentUser.role);
   }, [currentUser]);
 
-  // إضافة مستخدم جديد
   const addUser = useCallback(async (user: Omit<User, 'id'>) => {
     try {
       const { data, error } = await supabase
         .from('users')
-        .insert([{
-          name: user.name,
-          role: user.role,
-          username: user.username,
-        }])
+        .insert([{ name: user.name, role: user.role, username: user.username }])
         .select()
         .single();
       
@@ -92,12 +91,7 @@ const mappedUsers: User[] = data.map((u: any) => ({
         return newUser;
       }
       
-      const newUser: User = {
-        id: data.id.toString(),
-        name: data.name,
-        role: data.role as UserRole,
-        username: data.username,
-      };
+      const newUser: User = { id: data.id.toString(), name: data.name, role: data.role as UserRole, username: data.username };
       setUsers(prev => [...prev, newUser]);
       return newUser;
     } catch (err) {
@@ -108,19 +102,13 @@ const mappedUsers: User[] = data.map((u: any) => ({
     }
   }, []);
 
-  // تحديث مستخدم
   const updateUser = useCallback(async (id: string, updates: Partial<User>) => {
     try {
       const updateData: Record<string, unknown> = {};
       if (updates.name) updateData.name = updates.name;
       if (updates.role) updateData.role = updates.role;
       if (updates.username) updateData.username = updates.username;
-
-      const { error } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', parseInt(id));
-      
+      const { error } = await supabase.from('users').update(updateData).eq('id', parseInt(id));
       if (error) console.error('خطأ في تحديث المستخدم:', error);
     } catch (err) {
       console.error('خطأ:', err);
@@ -128,14 +116,9 @@ const mappedUsers: User[] = data.map((u: any) => ({
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
   }, []);
 
-  // حذف مستخدم
   const deleteUser = useCallback(async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', parseInt(id));
-      
+      const { error } = await supabase.from('users').delete().eq('id', parseInt(id));
       if (error) console.error('خطأ في حذف المستخدم:', error);
     } catch (err) {
       console.error('خطأ:', err);
@@ -148,17 +131,9 @@ const mappedUsers: User[] = data.map((u: any) => ({
   }, []);
 
   return {
-    currentUser,
-    users,
-    login,
-    logout,
-    hasRole,
-    canAccess,
+    currentUser, users, login, logout, hasRole, canAccess,
     isAuthenticated: !!currentUser,
-    addUser,
-    updateUser,
-    deleteUser,
-    updateUserPassword,
-    loading,
+    addUser, updateUser, deleteUser, updateUserPassword,
+    loading, dataLoaded,
   };
 }
