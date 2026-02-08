@@ -26,7 +26,8 @@ function App() {
     addUser,
     updateUser,
     deleteUser,
-    updateUserPassword
+    updateUserPassword,
+    loading: authLoading,
   } = useAuth();
   const { 
     stats, 
@@ -79,6 +80,18 @@ function App() {
     if (defaultView !== 'dashboard') {
       setCurrentView(defaultView);
     }
+  }
+
+  // عرض شاشة التحميل
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0e3144' }}>
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">جاري تحميل النظام...</p>
+        </div>
+      </div>
+    );
   }
 
   // عرض تسجيل الدخول
